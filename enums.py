@@ -13,7 +13,11 @@ class DataType(Enum):
 
 
 class BenchmarkDataset(Enum):
-    mnist = 1
-    cifar10 = 2
-    imdb = 3
-    titanic = 4
+    MNIST = 1
+    CIFAR10 = 2
+    IMDB = 3
+
+
+class Mode(Enum):
+    Search = 1
+    Optimize = 2
