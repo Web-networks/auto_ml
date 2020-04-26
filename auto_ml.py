@@ -1,44 +1,43 @@
-import os
-import sys
 import logging
-import autokeras as ak
 import time
 import argparse
-from benchmark_data import load_data
-from enums import TaskType, DataType, BenchmarkDataset
+from enums import *
+from context import Context
+from states import get_initial_state
 
-from auto_model_builder import GeneralModelBuilder, CustomModelBuilder
 
 parser = argparse.ArgumentParser("auto_ml")
-parser.add_argument('--mode', type=str, default='search', help='search or optimize')
-parser.add_argument('--data_type', type=DataType, default=DataType.Image, help='image, text or structured data')
-parser.add_argument('--train_test_split', type=float, default=0.3, help='test size')
-parser.add_argument('--batch_size', type=int, default=1)
-parser.add_argument('--name', type=str, default='model_name', help='')
-parser.add_argument('--seed', type=int, default=42)
-parser.add_argument('--epochs', type=int, default=1)
-parser.add_argument('--task', type=TaskType, default=TaskType.Classification, help='classification or regression')
-parser.add_argument('--time_limit', type=int, default=60, help='time limit in minutes')
-parser.add_argument('--data', type=BenchmarkDataset, default=BenchmarkDataset.mnist, help='benchmark data (mnist, cifar10, imdb, titanic)')
-parser.add_argument('--model_path', type=str, default='model.h5')
+parser.add_argument('--mode', type=Mode, default='search', help='search -> 1\noptimize -> 2')
+parser.add_argument('--data_type', type=DataType, default=DataType.Image,
+                    help='image -> 1\ntext -> 2\nstructured data -> 3')
+parser.add_argument('--task', type=TaskType, default=TaskType.Classification,
+                    help='classification -> 1\nregression -> 2')
+parser.add_argument('--data_file', type=BenchmarkDataset, default=BenchmarkDataset.mnist,
+                    help='mnist -> 1\ncifar10 -> 2\nimdb -> 3')
+parser.add_argument('--model_path', type=str, default='./model.h5', help="path to save model")
+parser.add_argument("--base_arch_path", type=str, default=None, help="base architecture python file")
 args = parser.parse_args()
+
+logger = logging.getLogger("auto_ml")
+fh = logging.FileHandler("auto_ml.log")
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 
 def main():
-    (x_train, y_train), (x_test, y_test) = load_data(args.data)
-    if args.mode == 'search':
-        builder = GeneralModelBuilder()
-    else:
-        builder = CustomModelBuilder()
-    builder.set_name(args.name)
-    builder.set_seed(args.seed)
-    builder.set_data_type(args.data_type)
-    builder.set_task(args.task)
-    auto_model = builder.model
-    auto_model.fit(x_train, y_train)
-    auto_model.evaluate(x_test, y_test)
-    model = auto_model.export_model()
-    model.save(args.model_path)
+    logger.info("Service start..")
+    start = time.time()
+    context = Context(args.task_type, args.data_type, args.data_file, args.mode, args.model_path, args.base_arch_path)
+    state = get_initial_state()
+    while state is not None:
+        state.enter(context)
+        state.handle(context)
+        state = state.next()
+    end = time.time()
+    print(f"Overall time: {(end-start)/60}min.")
+    logger.info("Service finished.")
 
 
 if __name__ == '__main__':
