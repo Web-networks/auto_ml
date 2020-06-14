@@ -1,0 +1,7 @@
+numpy
+tensorflow
+autokeras
+luigi
+keras
+argparse
+tf-nightly
